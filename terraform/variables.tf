@@ -8,5 +8,5 @@ variable "aws_region" {
 variable "project_name" {
   description = "Name of the project"
   type        = string
-  default     = "simple-ml-demo"
+  default     = "simple-ml-demo-v2"
 }
