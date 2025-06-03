@@ -10,6 +10,7 @@ import joblib
 import tarfile
 import os
 import tempfile
+import time
 
 def create_sample_data():
     """Create sample classification data"""
@@ -98,22 +99,32 @@ def output_fn(prediction, content_type):
 
 def upload_model_to_s3():
     """Upload trained model to S3"""
-    # Get bucket name from Terraform output
+    import os
+    
+    # Get bucket name from environment variable or find it
+    bucket_name = os.environ.get('BUCKET_NAME')
     s3_client = boto3.client('s3')
     
-    # List buckets to find our ML bucket
-    buckets = s3_client.list_buckets()
-    ml_bucket = None
-    for bucket in buckets['Buckets']:
-        if 'ml-bucket' in bucket['Name']:
-            ml_bucket = bucket['Name']
-            break
+    if not bucket_name:
+        # Fallback: find ML bucket
+        buckets = s3_client.list_buckets()
+        for bucket in buckets['Buckets']:
+            if 'ml-demo-2025-ml-bucket' in bucket['Name']:
+                bucket_name = bucket['Name']
+                break
     
-    if not ml_bucket:
-        print("No ML bucket found. Make sure Terraform has been applied.")
+    if not bucket_name:
+        raise Exception("No ML bucket found")
+    
+    print(f"Using bucket: {bucket_name}")
+    
+    # Check if model already exists
+    try:
+        s3_client.head_object(Bucket=bucket_name, Key="model/model.tar.gz")
+        print("Model already exists, skipping upload")
         return
-    
-    print(f"Using bucket: {ml_bucket}")
+    except:
+        pass  # Model doesn't exist, continue with upload
     
     # Train model
     model = train_model()
@@ -126,27 +137,39 @@ def upload_model_to_s3():
         # Save model
         model_path = os.path.join(model_dir, "model.pkl")
         joblib.dump(model, model_path)
-        print(f"Model saved to: {model_path}")
         
         # Save inference script
         inference_path = os.path.join(model_dir, "inference.py")
         with open(inference_path, 'w') as f:
             f.write(create_inference_script())
-        print(f"Inference script saved to: {inference_path}")
         
         # Create tar.gz file
         tar_path = os.path.join(temp_dir, "model.tar.gz")
         with tarfile.open(tar_path, "w:gz") as tar:
             tar.add(model_dir, arcname=".")
         
-        print(f"Model archive created: {tar_path}")
-        
-        # Upload to S3
+        # Upload to S3 with retry
         s3_key = "model/model.tar.gz"
-        print(f"Uploading to s3://{ml_bucket}/{s3_key}")
-        
-        s3_client.upload_file(tar_path, ml_bucket, s3_key)
-        print("Model uploaded successfully!")
+        for attempt in range(3):
+            try:
+                print(f"Upload attempt {attempt + 1}/3 to s3://{bucket_name}/{s3_key}")
+                s3_client.upload_file(
+                    tar_path, 
+                    bucket_name, 
+                    s3_key,
+                    ExtraArgs={'ServerSideEncryption': 'AES256'}
+                )
+                
+                # Verify upload
+                response = s3_client.head_object(Bucket=bucket_name, Key=s3_key)
+                print(f"Upload successful! Size: {response['ContentLength']} bytes")
+                return
+                
+            except Exception as e:
+                print(f"Attempt {attempt + 1} failed: {e}")
+                if attempt == 2:
+                    raise
+                time.sleep(5)
 
 if __name__ == "__main__":
     upload_model_to_s3()

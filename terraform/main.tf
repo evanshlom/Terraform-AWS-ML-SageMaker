@@ -1,3 +1,4 @@
+# terraform/main.tf
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -110,16 +111,29 @@ resource "aws_sagemaker_model" "ml_model" {
 resource "null_resource" "upload_model" {
   triggers = {
     bucket_id = aws_s3_bucket.ml_bucket.id
+    script_hash = filemd5("${path.module}/../scripts/train_and_upload.py")
   }
 
   provisioner "local-exec" {
-    command = "pip install boto3 scikit-learn joblib pandas numpy && python ../scripts/train_and_upload.py"
+    command = <<-EOT
+      cd ${path.module}/..
+      python3 -m pip install --user boto3 scikit-learn==1.3.0 joblib pandas numpy
+      python3 scripts/train_and_upload.py
+    EOT
+    
     environment = {
       AWS_DEFAULT_REGION = var.aws_region
+      PYTHONPATH = "${path.module}/.."
+      BUCKET_NAME = aws_s3_bucket.ml_bucket.bucket
     }
   }
 
-  depends_on = [aws_s3_bucket.ml_bucket]
+  depends_on = [
+    aws_s3_bucket.ml_bucket,
+    aws_s3_bucket_versioning.ml_bucket_versioning,
+    aws_s3_bucket_server_side_encryption_configuration.ml_bucket_encryption,
+    aws_iam_role_policy.s3_access_policy
+  ]
 }
 
 # SageMaker Endpoint Configuration
