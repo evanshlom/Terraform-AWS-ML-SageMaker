@@ -43,9 +43,9 @@ jobs:
       run: terraform plan
       working-directory: ./terraform
 
-    - name: Create S3 Infrastructure First
+    - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -auto-approve -target=aws_s3_bucket.ml_bucket -target=aws_s3_bucket_versioning.ml_bucket_versioning -target=aws_s3_bucket_server_side_encryption_configuration.ml_bucket_encryption -target=random_string.bucket_suffix
+      run: terraform apply -auto-approve
       working-directory: ./terraform
 
     - name: Upload ML Model
@@ -55,8 +55,3 @@ jobs:
         python scripts/train_and_upload.py
       env:
         AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
-
-    - name: Complete Infrastructure Deployment
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -auto-approve
-      working-directory: ./terraform
