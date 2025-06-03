@@ -43,7 +43,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "ml_bucket_encrypt
 
 # IAM role for SageMaker
 resource "aws_iam_role" "sagemaker_role" {
-  name = "${var.project_name}-sagemaker-role"
+  name = "${var.project_name}-sagemaker-role-${random_string.bucket_suffix.result}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -65,7 +65,7 @@ resource "aws_iam_role_policy_attachment" "sagemaker_execution_policy" {
 }
 
 resource "aws_iam_role_policy" "s3_access_policy" {
-  name = "${var.project_name}-s3-access"
+  name = "${var.project_name}-s3-access-${random_string.bucket_suffix.result}"
   role = aws_iam_role.sagemaker_role.id
 
   policy = jsonencode({
