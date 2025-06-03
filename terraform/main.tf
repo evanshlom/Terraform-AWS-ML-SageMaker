@@ -90,7 +90,7 @@ resource "aws_iam_role_policy" "s3_access_policy" {
 
 # SageMaker Model
 resource "aws_sagemaker_model" "ml_model" {
-  name               = "${var.project_name}-model"
+  name               = "${var.project_name}-model-${random_string.bucket_suffix.result}"
   execution_role_arn = aws_iam_role.sagemaker_role.arn
 
   primary_container {
@@ -106,7 +106,7 @@ resource "aws_sagemaker_model" "ml_model" {
 
 # SageMaker Endpoint Configuration
 resource "aws_sagemaker_endpoint_configuration" "ml_endpoint_config" {
-  name = "${var.project_name}-endpoint-config"
+  name = "${var.project_name}-endpoint-config-${random_string.bucket_suffix.result}"
 
   production_variants {
     variant_name           = "primary"
@@ -118,6 +118,6 @@ resource "aws_sagemaker_endpoint_configuration" "ml_endpoint_config" {
 
 # SageMaker Endpoint
 resource "aws_sagemaker_endpoint" "ml_endpoint" {
-  name                 = "${var.project_name}-endpoint"
+  name                 = "${var.project_name}-endpoint-${random_string.bucket_suffix.result}"
   endpoint_config_name = aws_sagemaker_endpoint_configuration.ml_endpoint_config.name
 }
