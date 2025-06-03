@@ -57,6 +57,7 @@ git add .
 git commit -m "Deploy ML service"
 git push origin main
 ```
+*** Note: If you deploy a 2nd time then you need to rename the project name in variables.tf
 
 ### 3.2 Monitor Deployment
 1. Go to your repo's **Actions** tab
