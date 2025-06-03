@@ -113,7 +113,7 @@ resource "null_resource" "upload_model" {
   }
 
   provisioner "local-exec" {
-    command = "pip install boto3 scikit-learn joblib pandas numpy && python scripts/train_and_upload.py"
+    command = "pip install boto3 scikit-learn joblib pandas numpy && python ../scripts/train_and_upload.py"
     environment = {
       AWS_DEFAULT_REGION = var.aws_region
     }
