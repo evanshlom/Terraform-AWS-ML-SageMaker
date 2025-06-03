@@ -1,4 +1,3 @@
-# .github/workflows/deploy.yml
 name: Deploy ML Service
 
 on:
@@ -47,11 +46,3 @@ jobs:
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: terraform apply -auto-approve
       working-directory: ./terraform
-
-    - name: Upload ML Model
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: |
-        pip install boto3 scikit-learn joblib pandas numpy
-        python scripts/train_and_upload.py
-      env:
-        AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}

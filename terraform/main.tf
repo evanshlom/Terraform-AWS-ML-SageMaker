@@ -1,4 +1,3 @@
-# terraform/main.tf
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -98,6 +97,25 @@ resource "aws_sagemaker_model" "ml_model" {
     model_data_url = "s3://${aws_s3_bucket.ml_bucket.bucket}/model/model.tar.gz"
     environment = {
       SAGEMAKER_PROGRAM = "inference.py"
+    }
+  }
+
+  depends_on = [
+    aws_s3_bucket.ml_bucket,
+    null_resource.upload_model
+  ]
+}
+
+# Upload model before creating SageMaker resources
+resource "null_resource" "upload_model" {
+  triggers = {
+    bucket_id = aws_s3_bucket.ml_bucket.id
+  }
+
+  provisioner "local-exec" {
+    command = "pip install boto3 scikit-learn joblib pandas numpy && python scripts/train_and_upload.py"
+    environment = {
+      AWS_DEFAULT_REGION = var.aws_region
     }
   }
 
