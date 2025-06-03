@@ -50,29 +50,42 @@ def create_inference_script():
 import joblib
 import numpy as np
 import json
+import os
 
 def model_fn(model_dir):
     """Load model from the model directory"""
-    model = joblib.load(f"{model_dir}/model.pkl")
-    return model
+    try:
+        model = joblib.load(os.path.join(model_dir, "model.pkl"))
+        return model
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        raise
 
-def input_fn(request_body, request_content_type):
+def input_fn(request_body, content_type):
     """Parse input data for inference"""
-    if request_content_type == "application/json":
-        input_data = json.loads(request_body)
-        return np.array(input_data["instances"])
+    if content_type == "application/json":
+        try:
+            input_data = json.loads(request_body)
+            return np.array(input_data["instances"])
+        except Exception as e:
+            print(f"Error parsing input: {e}")
+            raise ValueError(f"Error parsing input: {e}")
     else:
-        raise ValueError(f"Unsupported content type: {request_content_type}")
+        raise ValueError(f"Unsupported content type: {content_type}")
 
 def predict_fn(input_data, model):
     """Make predictions"""
-    predictions = model.predict(input_data)
-    probabilities = model.predict_proba(input_data)
-    
-    return {
-        "predictions": predictions.tolist(),
-        "probabilities": probabilities.tolist()
-    }
+    try:
+        predictions = model.predict(input_data)
+        probabilities = model.predict_proba(input_data)
+        
+        return {
+            "predictions": predictions.tolist(),
+            "probabilities": probabilities.tolist()
+        }
+    except Exception as e:
+        print(f"Error making predictions: {e}")
+        raise
 
 def output_fn(prediction, content_type):
     """Format prediction output"""
