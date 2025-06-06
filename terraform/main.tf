@@ -114,7 +114,7 @@ resource "null_resource" "upload_model" {
   provisioner "local-exec" {
     command = <<-EOT
       cd ${path.module}/..
-      python3 -m pip install --user --force-reinstall boto3 xgboost==1.5.1 pandas numpy==1.26.4
+      python3 -m pip install --user --force-reinstall boto3 xgboost==1.5.1 scikit-learn pandas numpy==1.26.4
       python3 scripts/train_and_upload.py
     EOT
     
