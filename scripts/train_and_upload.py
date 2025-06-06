@@ -2,11 +2,9 @@
 import boto3
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-import joblib
 import tarfile
 import os
 import tempfile
@@ -25,7 +23,7 @@ def create_sample_data():
     return X, y
 
 def train_model():
-    """Train a simple RandomForest model"""
+    """Train a simple XGBoost model"""
     print("Creating sample data...")
     X, y = create_sample_data()
     
@@ -34,8 +32,9 @@ def train_model():
         X, y, test_size=0.2, random_state=42
     )
     
-    print("Training model...")
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    print("Training XGBoost model...")
+    import xgboost as xgb
+    model = xgb.XGBClassifier(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     
     # Evaluate model
@@ -113,19 +112,14 @@ def upload_model_to_s3():
         model_dir = os.path.join(temp_dir, "model")
         os.makedirs(model_dir, exist_ok=True)
         
-        # Save model
-        model_path = os.path.join(model_dir, "model.pkl")
-        joblib.dump(model, model_path)
+        # Save model in XGBoost format
+        model_path = os.path.join(model_dir, "xgboost-model")
+        model.save_model(model_path)
         
-        # Save inference script
-        inference_path = os.path.join(model_dir, "inference.py")
-        with open(inference_path, 'w') as f:
-            f.write(create_inference_script())
-        
-        # Create tar.gz file
+        # Create tar.gz file (XGBoost doesn't need inference script)
         tar_path = os.path.join(temp_dir, "model.tar.gz")
         with tarfile.open(tar_path, "w:gz") as tar:
-            tar.add(model_dir, arcname=".")
+            tar.add(os.path.join(model_dir, "xgboost-model"), arcname="xgboost-model")
         
         # Upload to S3 with retry
         s3_key = "model/model.tar.gz"

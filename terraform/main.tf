@@ -88,17 +88,14 @@ resource "aws_iam_role_policy" "s3_access_policy" {
   })
 }
 
-# SageMaker Model
+# SageMaker Model - Use XGBoost built-in algorithm instead
 resource "aws_sagemaker_model" "ml_model" {
   name               = "${var.project_name}-model-${random_string.bucket_suffix.result}"
   execution_role_arn = aws_iam_role.sagemaker_role.arn
 
   primary_container {
-    image = "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:0.23-1-cpu-py3"
+    image = "683313688378.dkr.ecr.us-east-1.amazonaws.com/xgboost:1.5-1"
     model_data_url = "s3://${aws_s3_bucket.ml_bucket.bucket}/model/model.tar.gz"
-    environment = {
-      SAGEMAKER_PROGRAM = "inference.py"
-    }
   }
 
   depends_on = [
@@ -117,7 +114,7 @@ resource "null_resource" "upload_model" {
   provisioner "local-exec" {
     command = <<-EOT
       cd ${path.module}/..
-      python3 -m pip install --user --force-reinstall boto3 scikit-learn==1.4.0 joblib pandas numpy==1.26.4
+      python3 -m pip install --user --force-reinstall boto3 xgboost==1.5.1 pandas numpy==1.26.4
       python3 scripts/train_and_upload.py
     EOT
     
