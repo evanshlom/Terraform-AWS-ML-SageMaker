@@ -94,7 +94,7 @@ resource "aws_sagemaker_model" "ml_model" {
   execution_role_arn = aws_iam_role.sagemaker_role.arn
 
   primary_container {
-    image = "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3"
+    image = "246618743249.dkr.ecr.us-west-2.amazonaws.com/sagemaker-scikit-learn:1.0-1-cpu-py3"
     model_data_url = "s3://${aws_s3_bucket.ml_bucket.bucket}/model/model.tar.gz"
     environment = {
       SAGEMAKER_PROGRAM = "inference.py"
