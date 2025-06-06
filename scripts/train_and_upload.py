@@ -48,52 +48,86 @@ def train_model():
 def create_inference_script():
     """Create inference script for SageMaker"""
     inference_code = '''
+import os
+import json
 import joblib
 import numpy as np
-import json
-import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def model_fn(model_dir):
     """Load model from the model directory"""
     try:
-        model = joblib.load(os.path.join(model_dir, "model.pkl"))
+        logger.info(f"Loading model from {model_dir}")
+        model_path = os.path.join(model_dir, "model.pkl")
+        logger.info(f"Model path: {model_path}")
+        
+        if not os.path.exists(model_path):
+            logger.error(f"Model file not found at {model_path}")
+            raise FileNotFoundError(f"Model file not found at {model_path}")
+            
+        model = joblib.load(model_path)
+        logger.info("Model loaded successfully")
         return model
     except Exception as e:
-        print(f"Error loading model: {e}")
+        logger.error(f"Error loading model: {e}")
         raise
 
-def input_fn(request_body, content_type):
+def input_fn(request_body, content_type="application/json"):
     """Parse input data for inference"""
-    if content_type == "application/json":
-        try:
+    try:
+        logger.info(f"Parsing input with content_type: {content_type}")
+        
+        if content_type == "application/json":
             input_data = json.loads(request_body)
-            return np.array(input_data["instances"])
-        except Exception as e:
-            print(f"Error parsing input: {e}")
-            raise ValueError(f"Error parsing input: {e}")
-    else:
-        raise ValueError(f"Unsupported content type: {content_type}")
+            logger.info(f"Input data: {input_data}")
+            
+            if "instances" in input_data:
+                return np.array(input_data["instances"])
+            else:
+                return np.array(input_data)
+        else:
+            raise ValueError(f"Unsupported content type: {content_type}")
+    except Exception as e:
+        logger.error(f"Error parsing input: {e}")
+        raise
 
 def predict_fn(input_data, model):
     """Make predictions"""
     try:
+        logger.info(f"Making prediction on data shape: {input_data.shape}")
+        
         predictions = model.predict(input_data)
         probabilities = model.predict_proba(input_data)
         
-        return {
+        result = {
             "predictions": predictions.tolist(),
             "probabilities": probabilities.tolist()
         }
+        
+        logger.info("Prediction successful")
+        return result
     except Exception as e:
-        print(f"Error making predictions: {e}")
+        logger.error(f"Error making predictions: {e}")
         raise
 
-def output_fn(prediction, content_type):
+def output_fn(prediction, content_type="application/json"):
     """Format prediction output"""
-    if content_type == "application/json":
-        return json.dumps(prediction)
-    else:
-        raise ValueError(f"Unsupported content type: {content_type}")
+    try:
+        if content_type == "application/json":
+            return json.dumps(prediction)
+        else:
+            raise ValueError(f"Unsupported content type: {content_type}")
+    except Exception as e:
+        logger.error(f"Error formatting output: {e}")
+        raise
+
+# Health check endpoint
+def ping():
+    """Health check function"""
+    return {"status": "healthy"}
 '''
     return inference_code
 
